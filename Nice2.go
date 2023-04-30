@@ -72,12 +72,14 @@ func (s *Component[T]) Remove(object *T) {
 	index := s.index[(*object).Getid()]
 	//delete id and index of said object from map
 	delete(s.index, (*object).Getid())
+	(*s.theArray[len(s.theArray)-1]).LockMu()
 	//set value of deleted index to the last object in array, thereby deleting it
 	s.theArray[index] = s.theArray[len(s.theArray)-1]
 	//get id of moved index
 	movedId := (*s.theArray[index]).Getid()
 	//set new index of moved object correctly in map
 	s.index[movedId] = index
+	(*s.theArray[index]).UnlockMu()
 	//delete the last (now duplicated) object from the array
 	s.theArray = s.theArray[:len(s.theArray)-1]
 	(*object).UnlockMu()
@@ -95,11 +97,12 @@ func (s *Component[T]) IterateWrite(f func(int, *T)) {
 	println("Unlocked")
 }
 
-func (s *Component[T]) IterateRead(f func(int, T)) {
+func (s *Component[T]) IterateRead(f func(int, *T)) {
 
 	for i, s := range s.theArray {
 		z := *s
-		f(i, z)
+		y := &z
+		f(i, y)
 	}
 }
 

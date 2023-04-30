@@ -45,9 +45,8 @@ var DrawSystems []func(screen *ebiten.Image, wg *sync.WaitGroup)
 func init() {
 	Systems = append(Systems, TestSys)
 	Systems = append(Systems, TestSys)
-	Systems = append(Systems, TestSys)
-	Systems = append(Systems, TestSys)
-	Systems = append(Systems, TestSys)
+
+	Systems = append(Systems, TestSysMovement)
 
 	DrawSystems = append(DrawSystems, TestSys2)
 }
@@ -82,11 +81,36 @@ func TestSys(wg *sync.WaitGroup) {
 func TestSys2(screen *ebiten.Image, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	Comps.Position.IterateRead(func(i int, s Position) {
+	Comps.Position.IterateRead(func(i int, s *Position) {
 		if a := Comps.Image.GetRead(i); a != nil {
 			a.op.GeoM.Reset()
 			a.op.GeoM.Translate(float64(s.X), float64(s.Y))
 			screen.DrawImage(a.image, &a.op)
 		}
 	})
+}
+
+func TestSysMovement(wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	if ebiten.IsKeyPressed(ebiten.KeyW) {
+		Comps.Position.IterateWrite(func(s int, pos *Position) {
+			pos.Y = pos.Y - 5
+		})
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyS) {
+		Comps.Position.IterateWrite(func(s int, pos *Position) {
+			pos.Y = pos.Y + 5
+		})
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyD) {
+		Comps.Position.IterateWrite(func(s int, pos *Position) {
+			pos.X = pos.X + 5
+		})
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyA) {
+		Comps.Position.IterateWrite(func(s int, pos *Position) {
+			pos.X = pos.X - 5
+		})
+	}
 }
