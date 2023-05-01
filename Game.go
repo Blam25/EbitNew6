@@ -3,6 +3,8 @@ package main
 import (
 	"sync"
 
+	"image"
+
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -43,10 +45,11 @@ var Systems []func(wg *sync.WaitGroup)
 var DrawSystems []func(screen *ebiten.Image, wg *sync.WaitGroup)
 
 func init() {
-	Systems = append(Systems, TestSys)
-	Systems = append(Systems, TestSys)
+	//Systems = append(Systems, TestSys)
+	//Systems = append(Systems, TestSys)
 
 	Systems = append(Systems, TestSysMovement)
+	Systems = append(Systems, setRect)
 
 	DrawSystems = append(DrawSystems, TestSys2)
 }
@@ -95,22 +98,74 @@ func TestSysMovement(wg *sync.WaitGroup) {
 
 	if ebiten.IsKeyPressed(ebiten.KeyW) {
 		Comps.Position.IterateWrite(func(s int, pos *Position) {
-			pos.Y = pos.Y - 5
+			if Comps.Player.GetRead(pos.Getid()) == nil {
+				pos.Y = pos.Y + 5
+			}
 		})
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
 		Comps.Position.IterateWrite(func(s int, pos *Position) {
-			pos.Y = pos.Y + 5
+			pos.Y = pos.Y - 5
+		})
+		Comps.Player.IterateRead(func(s int, player *Player) {
+			Comps.Position.GetWrite(player.Getid(), func(pos *Position) {
+				pos.Y = pos.Y + 5
+			})
 		})
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyD) {
 		Comps.Position.IterateWrite(func(s int, pos *Position) {
-			pos.X = pos.X + 5
+			pos.X = pos.X - 5
+		})
+		Comps.Player.IterateRead(func(s int, player *Player) {
+			Comps.Position.GetWrite(player.Getid(), func(pos *Position) {
+				pos.X = pos.X + 5
+			})
 		})
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyA) {
 		Comps.Position.IterateWrite(func(s int, pos *Position) {
-			pos.X = pos.X - 5
+			pos.X = pos.X + 5
+		})
+		Comps.Player.IterateRead(func(s int, player *Player) {
+			Comps.Position.GetWrite(player.Getid(), func(pos *Position) {
+				pos.X = pos.X - 5
+			})
 		})
 	}
+}
+
+func setRect(wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	Comps.Rect.IterateWrite(func(i int, s *Rect) {
+		x := int(Comps.Position.GetRead(s.Getid()).X)
+		y := int(Comps.Position.GetRead(s.Getid()).Y)
+		s.Rect = image.Rect(
+			x,
+			y,
+			x+s.Width,
+			y+s.Height)
+		s.Top = image.Rect(
+			x+2,
+			y-s.Height,
+			x+s.Width-2,
+			y-s.Height+10)
+		s.Bottom = image.Rect(
+			x+2,
+			y,
+			x+s.Width-2,
+			y-10)
+		s.Right = image.Rect(
+			x+s.Width-10,
+			y+2,
+			x+s.Width,
+			y+s.Height-2)
+		s.Left = image.Rect(
+			x,
+			y+2,
+			x+10,
+			y+s.Height-2)
+	})
+
 }

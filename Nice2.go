@@ -3,6 +3,7 @@ package main
 import (
 	"sync"
 	//E "Nice2"
+	I "image"
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -10,6 +11,23 @@ import (
 )
 
 var identifier int
+
+type Rect struct {
+	Entity
+	*mu
+	Rect   I.Rectangle
+	Width  int
+	Height int
+	Top    I.Rectangle
+	Right  I.Rectangle
+	Bottom I.Rectangle
+	Left   I.Rectangle
+}
+
+type Player struct {
+	Entity
+	*mu
+}
 
 type Position struct {
 	Entity
@@ -66,20 +84,21 @@ func (s *Component[T]) Add(object *T) {
 	s.theArray = append(s.theArray, object)
 }
 
-func (s *Component[T]) Remove(object *T) {
+func (s *Component[T]) Remove(id int) {
+	object := s.theArray[s.index[id]]
 	(*object).LockMu()
 	//index of object to be removed
 	index := s.index[(*object).Getid()]
 	//delete id and index of said object from map
 	delete(s.index, (*object).Getid())
-	(*s.theArray[len(s.theArray)-1]).LockMu()
+	//(*s.theArray[len(s.theArray)-1]).LockMu()
 	//set value of deleted index to the last object in array, thereby deleting it
 	s.theArray[index] = s.theArray[len(s.theArray)-1]
 	//get id of moved index
 	movedId := (*s.theArray[index]).Getid()
 	//set new index of moved object correctly in map
 	s.index[movedId] = index
-	(*s.theArray[index]).UnlockMu()
+	//(*s.theArray[index]).UnlockMu()
 	//delete the last (now duplicated) object from the array
 	s.theArray = s.theArray[:len(s.theArray)-1]
 	(*object).UnlockMu()
@@ -118,8 +137,11 @@ func (s *Component[T]) GetWrite(id int, f func(*T)) {
 }
 
 func (s *Component[T]) GetRead(id int) *T {
-
-	z := *s.theArray[id]
+	if _, okay := s.index[id]; !okay {
+		return nil
+	}
+	//return s.theArray[s.index[id]]
+	z := *s.theArray[s.index[id]]
 	y := &z
 	return y
 }
@@ -152,6 +174,8 @@ func main() {
 type Components struct {
 	Position *Component[Position]
 	Image    *Component[Image]
+	Rect     *Component[Rect]
+	Player   *Component[Player]
 }
 
 var Comps *Components = &Components{}
@@ -160,6 +184,8 @@ func init() {
 
 	Comps.Position = NewComp[Position]()
 	Comps.Image = NewComp[Image]()
+	Comps.Rect = NewComp[Rect]()
+	Comps.Player = NewComp[Player]()
 
 	var err error
 	image1, _, err := ebitenutil.NewImageFromFile("gopher.png")
@@ -170,10 +196,18 @@ func init() {
 	Ent1 := NewEntity()
 	Comps.Position.Add(&Position{Ent1, &mu{&sync.Mutex{}}, 200, 200})
 	Comps.Image.Add(&Image{Entity: Ent1, image: image1})
+	Comps.Rect.Add(&Rect{Entity: Ent1, mu: &mu{&sync.Mutex{}}})
+	Comps.Player.Add(&Player{Entity: Ent1, mu: &mu{&sync.Mutex{}}})
 
 	Ent2 := NewEntity()
 	Comps.Position.Add(&Position{Ent2, &mu{&sync.Mutex{}}, 100, 100})
 	Comps.Image.Add(&Image{Entity: Ent2, image: image1})
+
+	Comps.Position.Remove(Ent2.Getid())
+
+	Ent3 := NewEntity()
+	Comps.Position.Add(&Position{Ent3, &mu{&sync.Mutex{}}, 300, 300})
+	Comps.Image.Add(&Image{Entity: Ent3, image: image1})
 
 	//Ent1.Add(&Position{}, PosMap)
 
